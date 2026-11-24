@@ -1,0 +1,24 @@
+{
+  "name": "pdfzin",
+  "private": true,
+  "version": "1.0.0",
+  "description": "PDFZIN — leitor e editor de PDF open source que roda 100% no navegador.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["pdf", "pdf-editor", "pdf-reader", "pdf.js", "pdf-lib", "privacy"],
+  "scripts": {
+    "predev": "node scripts/copy-pdfjs-assets.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-pdfjs-assets.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.5.438"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.3.8"
+  }
+}

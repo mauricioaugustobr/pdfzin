@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>PDFZIN — leitor e editor de PDF grátis e open source</title>
+    <meta name="description" content="Leia e edite PDFs direto no navegador: texto, desenho, marca-texto, assinatura, imagens, girar, reordenar, juntar e excluir páginas. Grátis, open source e sem enviar seu arquivo pra nenhum servidor." />
+    <meta name="theme-color" content="#16181d" />
+    <meta property="og:title" content="PDFZIN — leitor e editor de PDF open source" />
+    <meta property="og:description" content="Edite PDFs no navegador sem enviar o arquivo pra lugar nenhum. Grátis e open source." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <button class="icon-btn" id="btn-sidebar" title="Mostrar/ocultar páginas" aria-label="Mostrar ou ocultar a lista de páginas">☰</button>
+        <div class="brand"><span class="logo">PDF<b>ZIN</b></span></div>
+        <button class="btn primary" id="btn-open" title="Abrir PDF (Ctrl+O)">Abrir PDF</button>
+        <button class="btn" id="btn-save" title="Baixar PDF editado (Ctrl+S)" disabled>Baixar PDF</button>
+        <span class="filename" id="filename"></span>
+        <div class="spacer"></div>
+        <div class="search">
+          <input id="search" type="search" placeholder="Buscar no PDF" aria-label="Buscar texto no PDF" disabled />
+          <span id="search-info" class="muted"></span>
+          <button class="icon-btn" id="search-prev" title="Resultado anterior" aria-label="Resultado anterior" disabled>‹</button>
+          <button class="icon-btn" id="search-next" title="Próximo resultado" aria-label="Próximo resultado" disabled>›</button>
+        </div>
+      </header>
+
+      <nav class="toolbar" id="toolbar" aria-label="Ferramentas">
+        <div class="group" role="radiogroup" aria-label="Ferramenta">
+          <button class="tool active" data-tool="read" title="Ler e selecionar texto (V)">👆 Ler</button>
+          <button class="tool" data-tool="select" title="Mover, redimensionar e apagar edições (S)">✥ Ajustar</button>
+          <button class="tool" data-tool="text" title="Adicionar texto (T)">T Texto</button>
+          <button class="tool" data-tool="ink" title="Desenhar à mão livre (D)">✎ Desenho</button>
+          <button class="tool" data-tool="highlight" title="Marca-texto (H)">▮ Marca-texto</button>
+          <button class="tool" data-tool="box" title="Retângulo (R)">▢ Retângulo</button>
+          <button class="tool" data-tool="whiteout" title="Cobrir com branco (W)">⬜ Corretivo</button>
+        </div>
+        <div class="group">
+          <button class="btn" id="btn-image" title="Inserir imagem (PNG ou JPG)">🖼 Imagem</button>
+          <button class="btn" id="btn-sign" title="Desenhar e inserir assinatura">✍ Assinatura</button>
+        </div>
+        <div class="group props">
+          <label title="Cor"><input type="color" id="color" value="#d62828" aria-label="Cor" /></label>
+          <label title="Tamanho do texto">A <input type="number" id="font-size" min="6" max="96" value="14" aria-label="Tamanho do texto" /></label>
+          <label title="Espessura do traço">— <input type="number" id="stroke" min="1" max="24" value="2" aria-label="Espessura do traço" /></label>
+        </div>
+        <div class="group">
+          <button class="icon-btn" id="btn-undo" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled>↶</button>
+          <button class="icon-btn" id="btn-redo" title="Refazer (Ctrl+Y)" aria-label="Refazer" disabled>↷</button>
+          <button class="icon-btn" id="btn-delete" title="Apagar edição selecionada (Delete)" aria-label="Apagar edição selecionada" disabled>🗑</button>
+        </div>
+        <div class="group">
+          <button class="icon-btn" id="zoom-out" title="Diminuir zoom (Ctrl -)" aria-label="Diminuir zoom">−</button>
+          <button class="btn small" id="zoom-label" title="Ajustar à largura">100%</button>
+          <button class="icon-btn" id="zoom-in" title="Aumentar zoom (Ctrl +)" aria-label="Aumentar zoom">+</button>
+          <span class="muted" id="page-info"></span>
+        </div>
+      </nav>
+
+      <main class="workspace">
+        <aside class="sidebar" id="sidebar" aria-label="Páginas">
+          <div class="sidebar-head">
+            <strong>Páginas</strong>
+            <span class="muted" id="page-count"></span>
+          </div>
+          <div class="sidebar-actions">
+            <button class="btn small" id="btn-merge" title="Juntar outro PDF no final" disabled>+ PDF</button>
+            <button class="btn small" id="btn-blank" title="Inserir página em branco depois da atual" disabled>+ Em branco</button>
+          </div>
+          <ol class="thumbs" id="thumbs"></ol>
+        </aside>
+
+        <section class="viewer" id="viewer">
+          <div class="empty" id="empty">
+            <div class="empty-card">
+              <h1>Leia e edite PDFs<br />sem enviar nada pra internet</h1>
+              <p>Texto, desenho, marca-texto, assinatura, imagens, girar, reordenar, juntar e excluir páginas. Tudo acontece no seu navegador.</p>
+              <div class="empty-actions">
+                <button class="btn primary big" id="btn-open-2">Escolher PDF</button>
+                <button class="btn big" id="btn-sample">Testar com um exemplo</button>
+              </div>
+              <p class="muted">ou arraste um PDF para esta janela</p>
+            </div>
+          </div>
+          <div class="pages" id="pages"></div>
+        </section>
+      </main>
+
+      <div class="drop-hint" id="drop-hint">Solte o PDF aqui</div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+      <dialog id="sign-dialog" class="dialog">
+        <form method="dialog">
+          <h2>Sua assinatura</h2>
+          <p class="muted">Desenhe com o mouse ou o dedo.</p>
+          <canvas id="sign-pad" width="600" height="220" aria-label="Área para desenhar a assinatura"></canvas>
+          <div class="dialog-actions">
+            <button type="button" class="btn" id="sign-clear">Limpar</button>
+            <div class="spacer"></div>
+            <button value="cancel" class="btn">Cancelar</button>
+            <button value="ok" class="btn primary" id="sign-ok">Inserir</button>
+          </div>
+        </form>
+      </dialog>
+
+      <input type="file" id="file-pdf" accept="application/pdf,.pdf" hidden />
+      <input type="file" id="file-merge" accept="application/pdf,.pdf" multiple hidden />
+      <input type="file" id="file-image" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
