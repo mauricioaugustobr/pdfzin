@@ -13,6 +13,7 @@ Leitor e editor de PDF **grátis e open source** que roda 100% no navegador. Seu
 - Buscar texto (`Ctrl+F`), sem ligar pra acento ou maiúscula: "acao" acha "Ação"
 
 **Editar**
+- **Editar texto** que já está no PDF: clique numa linha e reescreva no lugar, com tamanho, cor, negrito/itálico e estilo de fonte (sem serifa, serifada ou monoespaçada) parecidos com os originais
 - **Texto** em qualquer lugar da página (com acentos, várias linhas, cor e tamanho)
 - **Desenho** à mão livre
 - **Marca-texto**
@@ -37,6 +38,7 @@ No fim, **Baixar PDF** (`Ctrl+S`) gera um PDF novo com tudo gravado nas páginas
 | `V` | Ler |
 | `S` | Ajustar |
 | `T` | Texto |
+| `E` | Editar texto |
 | `D` | Desenho |
 | `H` | Marca-texto |
 | `R` | Retângulo |
@@ -46,6 +48,7 @@ No fim, **Baixar PDF** (`Ctrl+S`) gera um PDF novo com tudo gravado nas páginas
 ## Bom saber
 
 - O **corretivo cobre visualmente**, mas o texto original continua dentro do arquivo (dá pra selecionar e copiar). Pra esconder dado sensível de verdade, use uma ferramenta de redação/tarja que remova o conteúdo.
+- **Editar texto** cobre a linha original com a cor do fundo e escreve o texto novo por cima, com a fonte padrão mais parecida (Helvetica, Times ou Courier). Em fundo liso fica igual; em cima de foto ou degradê a capa aparece. O texto antigo continua dentro do arquivo (sai na busca e ao copiar), como no corretivo. Apagar todo o texto da linha remove ela da página.
 - O texto inserido usa Helvetica: português funciona inteiro; emojis e alfabetos não latinos viram `?`.
 - PDFs protegidos por senha abrem pra leitura, mas não dá pra salvar edições neles.
 - O PDFZIN ainda não preenche formulários de PDF.

@@ -1,11 +1,13 @@
 import './style.css';
 import { PDFDocument, degrees } from 'pdf-lib';
 import { drawAnnots, drawSelection } from './draw';
-import { hitTest, moveAnnot, resizeHandle, toLocal, uid } from './geometry';
+import { fontFamily, hitTest, moveAnnot, resizeHandle, toLocal, uid } from './geometry';
 import { normalize, openPdf, pdfjs } from './pdf';
 import type { PDFDocumentProxy, PDFPageProxy } from './pdf';
 import { EncryptedPdfError, buildPdf, samplePdf } from './save';
-import type { Annot, DocState, ImageAnnot, PageRef, TextAnnot, Tool } from './types';
+import { lineAt, lineCorners, lineCover, sampleColors, textLinesOf } from './textedit';
+import type { TextLine } from './textedit';
+import type { Annot, DocState, ImageAnnot, PageRef, RectAnnot, TextAnnot, Tool } from './types';
 
 // ---------------------------------------------------------------------------
 // Estado
@@ -42,6 +44,7 @@ let currentPageId: string | null = null;
 const views = new Map<string, PageView>();
 const pageCache = new Map<string, PDFPageProxy>();
 const textCache = new Map<string, string>();
+const lineCache = new Map<string, TextLine[] | Promise<TextLine[]>>();
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const viewer = $('viewer');
@@ -187,6 +190,7 @@ async function openBytes(bytes: Uint8Array, name: string): Promise<void> {
     old.forEach((s) => s.doc.loadingTask.destroy());
     pageCache.clear();
     textCache.clear();
+    lineCache.clear();
     thumbCache.clear();
     const n = sources[src].doc.numPages;
     state = { pages: Array.from({ length: n }, (_, i) => ({ id: uid(), src, index: i, rot: 0 })), annots: {} };
@@ -373,9 +377,25 @@ function drawOverlay(view: PageView): void {
   const t = viewport.transform;
   ctx.setTransform(t[0] * k, t[1] * k, t[2] * k, t[3] * k, t[4] * k, t[5] * k);
   const list = (state.annots[view.ref.id] ?? []).filter((a) => a !== editor?.annot);
+  if (editor?.replace && editor.view === view) list.push(editor.replace.cover);
   drawAnnots(ctx, list, () => drawOverlay(view));
   const sel = findSelected();
   if (sel && selected?.pageId === view.ref.id) drawSelection(ctx, sel, 1 / scale);
+  if (hoverLine?.pageId === view.ref.id && !editor) drawLineHint(ctx, hoverLine.line, 1 / scale);
+}
+
+function drawLineHint(ctx: CanvasRenderingContext2D, l: TextLine, px: number): void {
+  ctx.save();
+  ctx.strokeStyle = '#2f6bff';
+  ctx.fillStyle = 'rgb(47 107 255 / 0.08)';
+  ctx.lineWidth = 1.5 * px;
+  ctx.setLineDash([4 * px, 3 * px]);
+  ctx.beginPath();
+  lineCorners(l).forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function setScale(next: number): void {
@@ -559,6 +579,7 @@ async function deletePage(id: string): Promise<void> {
 
 function setTool(next: Tool): void {
   closeTextEditor(true);
+  setHoverLine(null);
   tool = next;
   viewer.dataset.tool = next;
   document.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => {
@@ -656,6 +677,11 @@ function bindOverlay(view: PageView): void {
       else openTextEditor(view, null, e);
       return;
     }
+    if (tool === 'edittext') {
+      e.preventDefault();
+      editOriginalText(view, x, y);
+      return;
+    }
     if (tool === 'select') {
       const sel = findSelected();
       if (sel && selected?.pageId === view.ref.id && nearHandle(sel, x, y)) {
@@ -696,6 +722,13 @@ function bindOverlay(view: PageView): void {
   overlay.addEventListener('pointermove', (e) => {
     const [x, y] = pdfPoint(view, e);
     if (!gesture) {
+      if (tool === 'edittext') {
+        const lines = linesReady(view);
+        const hit = topAnnotAt(view, x, y);
+        const line = lines && !hit ? lineAt(lines, x, y, 1 / scale) : null;
+        setHoverLine(line && { pageId: view.ref.id, line });
+        overlay.classList.toggle('over-item', !!line || hit?.kind === 'text');
+      }
       if (tool === 'select') {
         const sel = findSelected();
         const onHandle = !!sel && selected?.pageId === view.ref.id && nearHandle(sel, x, y);
@@ -752,6 +785,7 @@ function bindOverlay(view: PageView): void {
   };
   overlay.addEventListener('pointerup', end);
   overlay.addEventListener('pointercancel', end);
+  overlay.addEventListener('pointerleave', () => hoverLine?.pageId === view.ref.id && setHoverLine(null));
 
   overlay.addEventListener('dblclick', (e) => {
     if (tool !== 'select') return;
@@ -763,16 +797,23 @@ function bindOverlay(view: PageView): void {
 
 // --- Editor de texto -------------------------------------------------------
 
-let editor: null | { el: HTMLTextAreaElement; view: PageView; annot: TextAnnot | null; at: [number, number] } = null;
+/** Texto original sendo reescrito: a capa e o texto novo só entram no documento se algo mudar. */
+interface Replace {
+  cover: RectAnnot;
+  base: TextAnnot;
+}
 
-function openTextEditor(view: PageView, annot: TextAnnot | null, e?: PointerEvent): void {
+let editor: null | { el: HTMLTextAreaElement; view: PageView; annot: TextAnnot | null; at: [number, number]; replace: Replace | null } = null;
+
+function openTextEditor(view: PageView, annot: TextAnnot | null, e?: PointerEvent, replace: Replace | null = null): void {
   closeTextEditor(true);
-  const size = annot?.size ?? clamp(Number(sizeInput.value) || 14, 4, 200);
-  const color = annot?.color ?? colorInput.value;
+  const src = annot ?? replace?.base ?? null;
+  const size = src?.size ?? clamp(Number(sizeInput.value) || 14, 4, 200);
+  const color = src?.color ?? colorInput.value;
   const px = size * scale;
   let left: number, top: number;
-  if (annot) {
-    const [sx, sy] = view.viewport.convertToViewportPoint(annot.x, annot.y) as [number, number];
+  if (src) {
+    const [sx, sy] = view.viewport.convertToViewportPoint(src.x, src.y) as [number, number];
     left = sx;
     top = sy - px * 1.05;
   } else {
@@ -782,13 +823,17 @@ function openTextEditor(view: PageView, annot: TextAnnot | null, e?: PointerEven
   }
   const el = document.createElement('textarea');
   el.className = 'text-editor';
-  el.value = annot?.text ?? '';
+  el.value = src?.text ?? '';
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
   el.style.fontSize = `${px}px`;
   el.style.color = color;
+  el.style.fontFamily = fontFamily(src?.font);
+  el.style.fontWeight = src?.font?.bold ? 'bold' : '';
+  el.style.fontStyle = src?.font?.italic ? 'italic' : '';
+  if (replace) el.style.background = replace.cover.color;
   el.spellcheck = false;
-  el.setAttribute('aria-label', 'Texto a inserir no PDF');
+  el.setAttribute('aria-label', replace ? 'Texto do PDF (edite e clique fora para aplicar)' : 'Texto a inserir no PDF');
   el.rows = 1;
   const fit = () => {
     el.style.height = 'auto';
@@ -804,23 +849,31 @@ function openTextEditor(view: PageView, annot: TextAnnot | null, e?: PointerEven
   });
   el.addEventListener('blur', () => setTimeout(() => editor?.el === el && closeTextEditor(true), 0));
   view.el.append(el);
-  editor = { el, view, annot, at: [left, top] };
-  // Esconde o texto original enquanto edita (drawOverlay pula editor.annot).
-  if (annot) drawOverlay(view);
+  editor = { el, view, annot, at: [left, top], replace };
+  // Esconde o texto original enquanto edita (drawOverlay pula editor.annot e desenha a capa).
+  if (src) drawOverlay(view);
   fit();
-  requestAnimationFrame(() => el.focus());
+  requestAnimationFrame(() => {
+    el.focus();
+    if (replace) el.select();
+  });
 }
 
 function closeTextEditor(commit: boolean): void {
   if (!editor) return;
-  const { el, view, annot, at } = editor;
+  const { el, view, annot, at, replace } = editor;
   editor = null;
   const text = el.value.replace(/\s+$/, '');
   el.remove();
   if (commit) {
     const done = checkpoint();
     const list = annotsOf(view.ref.id);
-    if (annot) {
+    if (replace) {
+      if (text !== replace.base.text) {
+        list.push(replace.cover);
+        if (text) list.push({ ...replace.base, text });
+      }
+    } else if (annot) {
       if (!text) list.splice(list.indexOf(annot), 1);
       else annot.text = text;
     } else if (text) {
@@ -832,6 +885,76 @@ function closeTextEditor(commit: boolean): void {
     done();
   }
   drawOverlay(view);
+}
+
+// --- Editar o texto original ----------------------------------------------
+
+let hoverLine: { pageId: string; line: TextLine } | null = null;
+
+function setHoverLine(next: typeof hoverLine): void {
+  if (next?.line === hoverLine?.line) return;
+  const prev = hoverLine?.pageId;
+  hoverLine = next;
+  if (prev && views.get(prev)) drawOverlay(views.get(prev)!);
+  if (next && next.pageId !== prev && views.get(next.pageId)) drawOverlay(views.get(next.pageId)!);
+}
+
+/** Linhas da página, se já lidas; senão começa a ler e devolve null. */
+function linesReady(view: PageView): TextLine[] | null {
+  const v = lineCache.get(pageKey(view.ref));
+  if (Array.isArray(v)) return v;
+  if (!v) void linesOf(view);
+  return null;
+}
+
+async function linesOf(view: PageView): Promise<TextLine[]> {
+  const key = pageKey(view.ref);
+  let v = lineCache.get(key);
+  if (!v) {
+    v = textLinesOf(view.page).catch((err) => {
+      console.warn('Não consegui ler o texto desta página', err);
+      return [];
+    });
+    lineCache.set(key, v);
+    v.then((lines) => lineCache.set(key, lines));
+  }
+  return v;
+}
+
+async function editOriginalText(view: PageView, x: number, y: number): Promise<void> {
+  closeTextEditor(true);
+  const hit = topAnnotAt(view, x, y);
+  if (hit?.kind === 'text') return openTextEditor(view, hit);
+  // Uma linha já apagada (coberta) não volta a ser editável; Ctrl+Z desfaz.
+  if (hit?.kind === 'rect' && hit.mode === 'whiteout') return;
+  const line = lineAt(await linesOf(view), x, y, 1 / scale);
+  if (!line) {
+    const lines = await linesOf(view);
+    toast(lines.length ? 'Clique em cima de uma linha de texto.' : 'Esta página não tem texto editável (pode ser uma imagem escaneada).');
+    return;
+  }
+  setHoverLine(null);
+  const cover = lineCover(line);
+  // Cores lidas do desenho da página, em pixels do canvas.
+  const k = view.canvas.width / view.viewport.width;
+  const corners = lineCorners(line).map(([px, py]) => view.viewport.convertToViewportPoint(px, py) as [number, number]);
+  const xs = corners.map((c) => c[0] * k), ys = corners.map((c) => c[1] * k);
+  const { bg, fg } = sampleColors(view.canvas, { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) });
+  const replace: Replace = {
+    cover: { id: uid(), kind: 'rect', mode: 'whiteout', ...cover, color: bg, width: 0 },
+    base: {
+      id: uid(),
+      kind: 'text',
+      x: line.x,
+      y: line.y,
+      size: Math.round(line.size * 10) / 10,
+      color: fg,
+      text: line.text,
+      rot: Math.round(line.rot * 100) / 100,
+      font: line.font,
+    },
+  };
+  openTextEditor(view, null, undefined, replace);
 }
 
 // --- Imagens e assinatura --------------------------------------------------
@@ -1150,7 +1273,7 @@ searchInput.addEventListener('keydown', (e) => {
 $('search-prev').addEventListener('click', () => stepMatch(-1));
 $('search-next').addEventListener('click', () => stepMatch(1));
 
-const toolKeys: Record<string, Tool> = { v: 'read', s: 'select', t: 'text', d: 'ink', h: 'highlight', r: 'box', w: 'whiteout' };
+const toolKeys: Record<string, Tool> = { v: 'read', s: 'select', t: 'text', e: 'edittext', d: 'ink', h: 'highlight', r: 'box', w: 'whiteout' };
 
 window.addEventListener('keydown', (e) => {
   const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;

@@ -114,6 +114,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent-2); 
 .viewer[data-tool='read'] canvas.overlay { pointer-events: none; touch-action: auto; }
 .viewer:not([data-tool='read']) .textLayer { pointer-events: none; }
 .viewer[data-tool='text'] canvas.overlay { cursor: text; }
+.viewer[data-tool='edittext'] canvas.overlay { cursor: default; }
+.viewer[data-tool='edittext'] canvas.overlay.over-item { cursor: text; }
 .viewer[data-tool='ink'] canvas.overlay,
 .viewer[data-tool='highlight'] canvas.overlay,
 .viewer[data-tool='box'] canvas.overlay,

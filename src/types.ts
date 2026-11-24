@@ -1,7 +1,14 @@
 // Todas as coordenadas das edições ficam no espaço do usuário do PDF (pontos, eixo Y para cima),
 // as mesmas que o pdf-lib usa ao salvar. Assim a tela e o arquivo final batem em qualquer zoom ou giro.
 
-export type Tool = 'read' | 'select' | 'text' | 'ink' | 'highlight' | 'box' | 'whiteout';
+export type Tool = 'read' | 'select' | 'text' | 'edittext' | 'ink' | 'highlight' | 'box' | 'whiteout';
+
+/** Fonte aproximada: no PDF final vira uma das 12 fontes padrão (Helvetica, Times, Courier). */
+export interface FontSpec {
+  family: 'sans' | 'serif' | 'mono';
+  bold: boolean;
+  italic: boolean;
+}
 
 /** Uma página do documento final: aponta para uma página de um PDF de origem. */
 export interface PageRef {
@@ -28,6 +35,8 @@ export interface TextAnnot extends AnnotBase {
   text: string;
   /** Ângulo (graus, anti-horário) para o texto ficar em pé na página girada. */
   rot: number;
+  /** Sem `font`: Helvetica normal. */
+  font?: FontSpec;
 }
 
 export interface InkAnnot extends AnnotBase {
@@ -40,6 +49,7 @@ export interface InkAnnot extends AnnotBase {
 
 export interface RectAnnot extends AnnotBase {
   kind: 'rect';
+  /** `whiteout` pinta com `color` (branco no Corretivo, a cor do fundo na edição de texto). */
   mode: 'highlight' | 'box' | 'whiteout';
   /** Canto inferior esquerdo. */
   x: number;

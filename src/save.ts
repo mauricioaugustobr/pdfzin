@@ -21,7 +21,7 @@ import {
   stroke,
 } from 'pdf-lib';
 import { LINE_HEIGHT, fromLocal, hexToRgb, textLines } from './geometry';
-import type { Annot, DocState } from './types';
+import type { Annot, DocState, FontSpec } from './types';
 
 export class EncryptedPdfError extends Error {}
 
@@ -49,7 +49,12 @@ export async function buildPdf(sources: Uint8Array[], state: DocState, title?: s
     refs.forEach((r, i) => copied.set(r.id, pages[i]));
   }
 
-  const font = await out.embedFont(StandardFonts.Helvetica);
+  const fonts = new Map<StandardFonts, Promise<PDFFont>>();
+  const font = (spec?: FontSpec) => {
+    const name = standardFont(spec);
+    if (!fonts.has(name)) fonts.set(name, out.embedFont(name));
+    return fonts.get(name)!;
+  };
   const imageCache = new Map<string, PDFImage>();
 
   for (const ref of state.pages) {
@@ -66,7 +71,7 @@ async function drawAnnot(
   out: PDFDocument,
   page: PDFPage,
   a: Annot,
-  font: PDFFont,
+  font: (spec?: FontSpec) => Promise<PDFFont>,
   imageCache: Map<string, PDFImage>
 ): Promise<void> {
   switch (a.kind) {
@@ -74,7 +79,7 @@ async function drawAnnot(
       if (a.mode === 'highlight') {
         page.drawRectangle({ x: a.x, y: a.y, width: a.w, height: a.h, color: rgb(...hexToRgb(a.color)), opacity: 0.45, blendMode: BlendMode.Multiply });
       } else if (a.mode === 'whiteout') {
-        page.drawRectangle({ x: a.x, y: a.y, width: a.w, height: a.h, color: rgb(1, 1, 1) });
+        page.drawRectangle({ x: a.x, y: a.y, width: a.w, height: a.h, color: rgb(...hexToRgb(a.color)) });
       } else {
         page.drawRectangle({ x: a.x, y: a.y, width: a.w, height: a.h, borderColor: rgb(...hexToRgb(a.color)), borderWidth: a.width });
       }
@@ -100,10 +105,11 @@ async function drawAnnot(
     }
     case 'text': {
       const color = rgb(...hexToRgb(a.color));
+      const f = await font(a.font);
       textLines(a).forEach((line, i) => {
         const [x, y] = fromLocal(a, 0, -i * a.size * LINE_HEIGHT);
-        const safe = encodable(font, line);
-        if (safe) page.drawText(safe, { x, y, size: a.size, font, color, rotate: degrees(a.rot) });
+        const safe = encodable(f, line);
+        if (safe) page.drawText(safe, { x, y, size: a.size, font: f, color, rotate: degrees(a.rot) });
       });
       break;
     }
@@ -118,6 +124,17 @@ async function drawAnnot(
       break;
     }
   }
+}
+
+const STANDARD: Record<FontSpec['family'], StandardFonts[]> = {
+  // normal, negrito, itálico, negrito + itálico
+  sans: [StandardFonts.Helvetica, StandardFonts.HelveticaBold, StandardFonts.HelveticaOblique, StandardFonts.HelveticaBoldOblique],
+  serif: [StandardFonts.TimesRoman, StandardFonts.TimesRomanBold, StandardFonts.TimesRomanItalic, StandardFonts.TimesRomanBoldItalic],
+  mono: [StandardFonts.Courier, StandardFonts.CourierBold, StandardFonts.CourierOblique, StandardFonts.CourierBoldOblique],
+};
+
+function standardFont(spec?: FontSpec): StandardFonts {
+  return STANDARD[spec?.family ?? 'sans'][(spec?.bold ? 1 : 0) + (spec?.italic ? 2 : 0)];
 }
 
 /** A Helvetica padrão só tem os caracteres do WinAnsi (português inteiro cabe). O resto vira "?". */
@@ -151,6 +168,7 @@ export async function samplePdf(): Promise<Uint8Array> {
     ['Bem-vindo ao PDFZIN', [
       'Este é um PDF de exemplo para você testar o editor.',
       'Experimente:',
+      '• Editar texto: clique em "Aa Editar texto" e depois nesta frase.',
       '• Texto: clique em "T Texto" e depois em qualquer lugar da página.',
       '• Marca-texto: arraste por cima desta frase para destacá-la.',
       '• Desenho: faça um círculo em volta de alguma coisa.',
