@@ -30,6 +30,15 @@ Leitor e editor de PDF **grátis e open source** que roda 100% no navegador. Seu
 
 No fim, **Baixar PDF** (`Ctrl+S`) gera um PDF novo com tudo gravado nas páginas.
 
+## Funciona offline e instala como app
+
+Depois da primeira visita, o PDFZIN abre sem internet: pode fechar a aba, desligar o Wi-Fi e abrir de novo pelo mesmo endereço que ele carrega do cache do navegador e edita PDFs normalmente.
+
+- **Instalar:** no Chrome/Edge, o ícone de instalar na barra de endereço (ou menu › "Instalar PDFZIN"). No celular, "Adicionar à tela inicial". Aí ele abre em janela própria, sem a barra do navegador.
+- **Atualizações:** o service worker guarda a versão completa do build. Quando sai uma versão nova, aparece o aviso "Nova versão do PDFZIN disponível" com o botão **Recarregar** — nada muda no meio do seu trabalho sem você mandar.
+- **Limites:** a primeira visita precisa de internet (é ela que enche o cache, ~5 MB). Se você limpar os dados do site, volta a precisar de rede uma vez. No Firefox dá pra usar offline, mas não tem botão de instalar.
+- O modo offline é o mesmo app: nenhum arquivo seu vai pra servidor nenhum, com ou sem rede.
+
 ### Atalhos
 
 | Tecla | Ferramenta |
@@ -59,8 +68,10 @@ git clone https://github.com/mauricioaugustobr/pdfzin.git
 cd pdfzin
 npm install
 npm run dev      # abre em http://localhost:5173
-npm run build    # gera o site estático em dist/
+npm run build    # gera o site estático em dist/ (inclui o sw.js do modo offline)
 ```
+
+O `dist/sw.js` não é escrito à mão: `scripts/build-sw.mjs` roda depois do Vite, lê os arquivos gerados e monta a lista de precache com um id de versão por build (hash do conteúdo). Se você publicar por outro caminho que não a raiz do domínio, ele continua funcionando: as URLs do cache são relativas ao escopo.
 
 O `dist/` é só HTML, CSS e JS: dá pra publicar em qualquer hospedagem estática (GitHub Pages, Netlify, Vercel, Cloudflare Pages). Este repositório publica sozinho no GitHub Pages a cada push na `main` (`.github/workflows/deploy.yml`).
 
@@ -78,12 +89,16 @@ src/
   geometry.ts   coordenadas, seleção e redimensionamento
   save.ts       gera o PDF final (pdf-lib) e o PDF de exemplo
   pdf.ts        abre PDFs com o PDF.js
+  offline.ts    registra o service worker e mostra o aviso de versão nova
   types.ts      tipos das páginas e edições
+scripts/
+  build-sw.mjs        gera dist/sw.js com a lista de arquivos do build
+  copy-pdfjs-assets.mjs  copia fontes/cmaps do PDF.js pra public/
 ```
 
 ## Contribuindo
 
-Issues e pull requests são bem-vindos. Ideias pra próximas versões: preencher formulários, notas adesivas, extrair páginas em outro PDF, tema claro, PWA pra usar offline.
+Issues e pull requests são bem-vindos. Ideias pra próximas versões: preencher formulários, notas adesivas, extrair páginas em outro PDF, tema claro.
 
 ## Licença
 
@@ -91,4 +106,4 @@ Issues e pull requests são bem-vindos. Ideias pra próximas versões: preencher
 
 ---
 
-**English:** PDFZIN is a free, open source PDF reader and editor that runs entirely in your browser — add text, drawings, highlights, images and signatures, rotate/reorder/merge/delete pages, and download the result. Your file never leaves your device. MIT licensed.
+**English:** PDFZIN is a free, open source PDF reader and editor that runs entirely in your browser — add text, drawings, highlights, images and signatures, rotate/reorder/merge/delete pages, and download the result. It works offline and installs as an app after the first visit. Your file never leaves your device. MIT licensed.

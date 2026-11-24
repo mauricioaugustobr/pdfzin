@@ -2,6 +2,7 @@ import './style.css';
 import { PDFDocument, degrees } from 'pdf-lib';
 import { drawAnnots, drawSelection } from './draw';
 import { hitTest, moveAnnot, resizeHandle, toLocal, uid } from './geometry';
+import { setupOffline } from './offline';
 import { normalize, openPdf, pdfjs } from './pdf';
 import type { PDFDocumentProxy, PDFPageProxy } from './pdf';
 import { EncryptedPdfError, buildPdf, samplePdf } from './save';
@@ -1238,6 +1239,7 @@ window.addEventListener('resize', () => {
 
 if (window.innerWidth <= 800) $('sidebar').classList.add('closed');
 setupSignaturePad();
+setupOffline();
 setTool('read');
 updateButtons();
 

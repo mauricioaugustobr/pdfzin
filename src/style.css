@@ -176,6 +176,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent-2); 
 .toast.show { opacity: 1; transform: translateX(-50%); }
 .toast.error { border-color: #b33; }
 
+/* Aviso de versão nova (só aparece quando o service worker acha um deploy novo). */
+.sw-update {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #262a33;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 8px 8px 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  font-size: 14px;
+  max-width: calc(100vw - 24px);
+  z-index: 70;
+}
+
 .dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text); padding: 20px; max-width: calc(100vw - 24px); }
 .dialog::backdrop { background: rgb(0 0 0 / 0.6); }
 .dialog h2 { margin: 0 0 4px; }

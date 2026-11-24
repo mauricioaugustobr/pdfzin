@@ -10,6 +10,12 @@
     <meta property="og:description" content="Edite PDFs no navegador sem enviar o arquivo pra lugar nenhum. Grátis e open source." />
     <meta property="og:type" content="website" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <!-- Offline e instalável: o service worker vem do build (scripts/build-sw.mjs). -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PDFZIN" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div id="app">
