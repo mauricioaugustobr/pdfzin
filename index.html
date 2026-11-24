@@ -10,6 +10,12 @@
     <meta property="og:description" content="Edite PDFs no navegador sem enviar o arquivo pra lugar nenhum. Grátis e open source." />
     <meta property="og:type" content="website" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="application-name" content="PDFZIN" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PDFZIN" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div id="app">
@@ -18,6 +24,8 @@
         <div class="brand"><span class="logo">PDF<b>ZIN</b></span></div>
         <button class="btn primary" id="btn-open" title="Abrir PDF (Ctrl+O)">Abrir PDF</button>
         <button class="btn" id="btn-save" title="Baixar PDF editado (Ctrl+S)" disabled>Baixar PDF</button>
+        <button class="btn install" id="btn-install" title="Instalar o PDFZIN no aparelho" hidden>⤓ Instalar</button>
+        <button class="btn update" id="btn-update" title="Há uma versão nova — atualizar agora" hidden>↻ Atualizar</button>
         <span class="filename" id="filename"></span>
         <div class="spacer"></div>
         <div class="search">
@@ -84,6 +92,7 @@
                 <button class="btn big" id="btn-sample">Testar com um exemplo</button>
               </div>
               <p class="muted">ou arraste um PDF para esta janela</p>
+              <p class="muted small install-note" id="install-note" hidden></p>
             </div>
           </div>
           <div class="pages" id="pages"></div>
