@@ -1,7 +1,23 @@
-import type { Annot, TextAnnot } from './types';
+import type { Annot, FontSpec, TextAnnot } from './types';
 
 export const FONT_STACK = 'Helvetica, Arial, "Liberation Sans", sans-serif';
 export const LINE_HEIGHT = 1.2;
+
+const FAMILIES: Record<FontSpec['family'], string> = {
+  sans: FONT_STACK,
+  serif: '"Times New Roman", Times, "Liberation Serif", serif',
+  mono: '"Courier New", Courier, "Liberation Mono", monospace',
+};
+
+/** Família CSS equivalente à fonte padrão que vai para o PDF. */
+export function fontFamily(f?: FontSpec): string {
+  return FAMILIES[f?.family ?? 'sans'];
+}
+
+/** Valor do `font` do canvas/CSS para um tamanho em px. */
+export function cssFont(f: FontSpec | undefined, size: number): string {
+  return `${f?.italic ? 'italic ' : ''}${f?.bold ? 'bold ' : ''}${size}px ${fontFamily(f)}`;
+}
 
 export interface Box {
   x0: number;
@@ -16,8 +32,8 @@ export function textLines(a: TextAnnot): string[] {
   return a.text.split('\n');
 }
 
-export function textWidth(line: string, size: number): number {
-  measureCtx.font = `${size}px ${FONT_STACK}`;
+export function textWidth(line: string, size: number, font?: FontSpec): number {
+  measureCtx.font = cssFont(font, size);
   return measureCtx.measureText(line).width;
 }
 
@@ -26,7 +42,7 @@ export function localBox(a: Annot): Box {
   switch (a.kind) {
     case 'text': {
       const lines = textLines(a);
-      const w = Math.max(4, ...lines.map((l) => textWidth(l, a.size)));
+      const w = Math.max(4, ...lines.map((l) => textWidth(l, a.size, a.font)));
       const lh = a.size * LINE_HEIGHT;
       return { x0: -2, y0: -(lines.length - 1) * lh - a.size * 0.3, x1: w + 2, y1: a.size };
     }

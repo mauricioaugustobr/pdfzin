@@ -1,4 +1,4 @@
-import { FONT_STACK, LINE_HEIGHT, fromLocal, localBox, resizeHandle, textLines } from './geometry';
+import { LINE_HEIGHT, cssFont,fromLocal, localBox, resizeHandle, textLines } from './geometry';
 import type { Annot } from './types';
 
 const images = new Map<string, HTMLImageElement>();
@@ -30,7 +30,7 @@ export function drawAnnots(ctx: CanvasRenderingContext2D, annots: Annot[], onIma
           ctx.fillStyle = a.color;
           ctx.fillRect(a.x, a.y, a.w, a.h);
         } else if (a.mode === 'whiteout') {
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = a.color;
           ctx.fillRect(a.x, a.y, a.w, a.h);
         } else {
           ctx.strokeStyle = a.color;
@@ -54,7 +54,7 @@ export function drawAnnots(ctx: CanvasRenderingContext2D, annots: Annot[], onIma
         ctx.rotate((a.rot * Math.PI) / 180);
         ctx.scale(1, -1);
         ctx.fillStyle = a.color;
-        ctx.font = `${a.size}px ${FONT_STACK}`;
+        ctx.font = cssFont(a.font, a.size);
         ctx.textBaseline = 'alphabetic';
         textLines(a).forEach((line, i) => ctx.fillText(line, 0, i * a.size * LINE_HEIGHT));
         break;
