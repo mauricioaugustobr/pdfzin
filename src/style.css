@@ -53,6 +53,12 @@ button, input { font: inherit; color: inherit; }
 .btn:hover:not(:disabled), .icon-btn:hover:not(:disabled), .tool:hover { border-color: #3d4350; background: #242833; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
 .btn.primary:hover:not(:disabled) { background: #ff8256; border-color: #ff8256; }
+.btn.install { border-color: #3b5bd0; color: #cfdaff; background: #1a2340; }
+.btn.install:hover:not(:disabled) { background: #212c52; border-color: #4d6ee6; }
+.btn.update { border-color: var(--accent); color: var(--accent); background: transparent; }
+.btn.update:hover:not(:disabled) { background: rgb(255 107 53 / 0.12); border-color: var(--accent); }
+.linklike { border: 0; background: none; padding: 0 4px; color: var(--accent-2); text-decoration: underline; cursor: pointer; font-size: inherit; }
+.empty-card .install-note { font-size: 14px; margin-top: 14px; }
 .tool { background: transparent; border-color: transparent; }
 .tool.active { background: #2a2f3b; border-color: #444b5b; color: #fff; }
 button:disabled { opacity: 0.4; cursor: default; }

@@ -4,6 +4,7 @@ import { drawAnnots, drawSelection } from './draw';
 import { fontFamily, hitTest, moveAnnot, resizeHandle, toLocal, uid } from './geometry';
 import { normalize, openPdf, pdfjs } from './pdf';
 import type { PDFDocumentProxy, PDFPageProxy } from './pdf';
+import { initPwa } from './pwa';
 import { EncryptedPdfError, buildPdf, samplePdf } from './save';
 import { lineAt, lineCorners, lineCover, sampleColors, textLinesOf } from './textedit';
 import type { TextLine } from './textedit';
@@ -1363,6 +1364,29 @@ if (window.innerWidth <= 800) $('sidebar').classList.add('closed');
 setupSignaturePad();
 setTool('read');
 updateButtons();
+
+// PWA: botão de instalar, aviso de offline e atualização do app.
+initPwa({ toast });
+
+// Instalado como app: abre o PDF que o sistema mandar ("Abrir com PDFZIN").
+interface LaunchParamsLike {
+  files?: { getFile(): Promise<File> }[];
+}
+const launchQueue = (
+  window as unknown as { launchQueue?: { setConsumer(cb: (params: LaunchParamsLike) => void): void } }
+).launchQueue;
+launchQueue?.setConsumer((params) => {
+  const handle = params.files?.[0];
+  if (!handle) return;
+  void (async () => {
+    try {
+      await openFile(await handle.getFile());
+    } catch (error) {
+      console.error(error);
+      toast('Não consegui abrir o PDF que o sistema mandou.', true);
+    }
+  })();
+});
 
 // Atalho para testes automatizados e para quem quiser integrar.
 (window as unknown as { pdfzin: object }).pdfzin = {

@@ -31,6 +31,11 @@ Leitor e editor de PDF **grátis e open source** que roda 100% no navegador. Seu
 
 No fim, **Baixar PDF** (`Ctrl+S`) gera um PDF novo com tudo gravado nas páginas.
 
+**No aparelho**
+- Instala como app (Chrome, Edge, Android) ou pela Tela de Início (iPhone/iPad)
+- Depois da primeira visita, abre e funciona **sem internet**
+- Abre PDFs direto do sistema ("Abrir com PDFZIN") em navegadores Chromium
+
 ### Atalhos
 
 | Tecla | Ferramenta |
@@ -63,9 +68,24 @@ cd pdfzin
 npm install
 npm run dev      # abre em http://localhost:5173
 npm run build    # gera o site estático em dist/
+npm run icons    # regera os ícones do app (só se mudar o desenho)
 ```
 
 O `dist/` é só HTML, CSS e JS: dá pra publicar em qualquer hospedagem estática (GitHub Pages, Netlify, Vercel, Cloudflare Pages). Este repositório publica sozinho no GitHub Pages a cada push na `main` (`.github/workflows/deploy.yml`).
+
+## Instalar no aparelho e usar offline
+
+O PDFZIN é um PWA: depois da primeira visita ele fica guardado no aparelho e abre sem internet.
+
+- **Chrome, Edge e Android:** aparece o botão **⤓ Instalar** na barra de cima (ou use o ícone de instalar na barra de endereço). Vira um app com ícone próprio, em janela separada.
+- **iPhone e iPad (Safari):** toque em **Compartilhar** e depois em **Adicionar à Tela de Início**.
+- **Sem internet:** o app inteiro (HTML, CSS, JS, fontes e recursos do PDF.js) fica em cache na primeira carga. Depois disso, abrir, ler e editar funciona offline; só o download de uma versão nova precisa de rede.
+- **Abrir com PDFZIN:** instalado num navegador Chromium, o PDFZIN aparece na lista de apps pra abrir arquivos `.pdf` do sistema (no Windows, "Abrir com"; no Android, no compartilhar).
+- **Atualização:** quando sai versão nova, aparece o botão **↻ Atualizar**; ele troca o cache e recarrega. Sem clicar, você continua na versão que já está no aparelho.
+
+O service worker só existe na versão de produção: em `npm run dev` não há cache, então sempre roda o código atual. Pra testar offline, use `npm run build && npm run preview`.
+
+O `dist/sw.js` é gerado no build a partir de `src/sw.js`: o Vite injeta a lista de arquivos e um hash do conteúdo como versão do cache. Mexeu em `src/sw.js`? Rode o build e confira o arquivo gerado.
 
 ## Como funciona
 
